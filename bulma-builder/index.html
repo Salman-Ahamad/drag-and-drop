@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <style>
+        .plus-symbol {
+            color: red;
+            border: 2px solid black;
+            padding: 2px 5px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .dashed-dropzone {
+            border: 2px dashed black;
+            width: 200px;
+            height: 100px;
+            cursor: pointer;
+        }
+
+        .chip {
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            border: 1px solid black;
+            display: inline-block;
+        }
+
+        #canvas, #outputViewer {
+            border: 1px solid gray;
+            height: 400px;
+            overflow: auto;
+        }
+
+        #sidebar {
+            height: 400px;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="section">
+    <button class="button is-primary" onclick="openModal()">Define Component</button>
+    <div class="columns mt-5">
+        <!-- Sidebar for components and classes -->
+        <div class="column is-one-quarter" id="sidebar">
+            <!-- Chips for Bulma classes -->
+            <div class="chip" draggable="true" ondragstart="dragClass(event, 'mb-4')">mb-4</div>
+            <div class="chip" draggable="true" ondragstart="dragClass(event, 'is-centered')">is-centered</div>
+        </div>
+        <!-- Canvas and output viewer -->
+        <div class="column is-half" id="canvas" ondrop="dropOnCanvas(event)" ondragover="allowDrop(event)"></div>
+        <div class="column is-half" id="outputViewer"></div>
+    </div>
+</div>
+
+<!-- Modal for component creation -->
+<div class="modal" id="componentModal">
+    <div class="modal-background" onclick="closeModal()"></div>
+    <div class="modal-content">
+        <div class="box">
+            <h3 class="title">Define your component</h3>
+            <div class="field">
+                <label class="label">Name</label>
+                <input class="input" id="componentName" type="text" placeholder="e.g., div">
+            </div>
+            <div class="field">
+                <label class="label">HTML Template</label>
+                <textarea class="textarea" id="componentTemplate" placeholder='<div class="columns">{+}<div>'></textarea>
+            </div>
+            <button class="button is-primary" onclick="saveComponent()">Save Component</button>
+        </div>
+    </div>
+    <button class="modal-close is-large" aria-label="close" onclick="closeModal()"></button>
+</div>
+
+<script>
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function drag(ev) {
+        ev.dataTransfer.setData("componentName", ev.target.dataset.name);
+    }
+
+    function dropOnCanvas(ev) {
+        ev.preventDefault();
+        const componentName = ev.dataTransfer.getData("componentName");
+        const className = ev.dataTransfer.getData("className");
+
+        if (componentName) {
+            const userComponents = JSON.parse(localStorage.getItem('userComponents') || '[]');
+            const component = userComponents.find(c => c.name === componentName);
+            if (component) {
+                const div = document.createElement('div');
+                div.innerHTML = component.template;
+                ev.target.appendChild(div);
+                attachPlusListener();
+            }
+        } else if (className && ev.target.classList) {
+            ev.target.classList.add(className);
+        }
+
+        syncOutput();
+    }
+
+    function dragClass(event, className) {
+        event.dataTransfer.setData("className", className);
+    }
+
+    function syncOutput() {
+        document.getElementById('outputViewer').innerHTML = document.getElementById('canvas').innerHTML;
+    }
+
+    function openModal() {
+        document.getElementById('componentModal').classList.add('is-active');
+    }
+
+    function closeModal() {
+        document.getElementById('componentModal').classList.remove('is-active');
+    }
+
+    function saveComponent() {
+        const name = document.getElementById('componentName').value;
+        const template = document.getElementById('componentTemplate').value;
+
+        const userComponents = JSON.parse(localStorage.getItem('userComponents') || '[]');
+        userComponents.push({ name, template });
+        localStorage.setItem('userComponents', JSON.stringify(userComponents));
+
+        const div = document.createElement('div');
+        div.innerText = name;
+        div.draggable = true;
+        div.dataset.name = name;
+        div.addEventListener('dragstart', drag);
+        document.getElementById('sidebar').appendChild(div);
+
+        closeModal();
+    }
+
+    function attachPlusListener() {
+        document.querySelectorAll('.plus-symbol').forEach(el => {
+            el.onclick = function() {
+                this.outerHTML = '<div class="box dashed-dropzone" ondrop="dropOnCanvas(event)" ondragover="allowDrop(event)"></div>';
+            }
+        });
+    }
+
+    window.onload = function() {
+        const userComponents = JSON.parse(localStorage.getItem('userComponents') || '[]');
+        userComponents.forEach(component => {
+            const div = document.createElement('div');
+            div.innerText = component.name;
+            div.draggable = true;
+            div.dataset.name = component.name;
+            div.addEventListener('dragstart', drag);
+            document.getElementById('sidebar').appendChild(div);
+        });
+
+        attachPlusListener();
+    };
+</script>
+
+</body>
+</html>
